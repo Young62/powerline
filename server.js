@@ -1,3 +1,5 @@
+//html server and variables
+///////////////////////////
 var bodyParser=require('body-parser');
 var express = require('express')
 var ws = require('ws')
@@ -17,21 +19,71 @@ app.listen(3000, function () {
    console.log('Powerline Server listening on port 3000:')
 });
 
+//websocket and game, server and variables
+//////////////////////////////////////////
+var clientID=0;
+var clients=[];
+var legendsSelected=[];
+var players=[];
+
 var WebSocketServer = require('ws').Server,
   wss = new WebSocketServer({port: 40510});
 
-
 wss.on('connection', function (ws) {
   ws.on('message', function (event) {
-    var msg=JSON.parse(event);
-    switch(msg.type){
+    var rec=JSON.parse(event);
+    switch(rec.type){
       case "connection":
-        console.log("new connection");
+        console.log("Client " + clientID + " connected.");
+        var msg={
+          type:"connected",
+          clientID: clientID
+        };
+        clientID+=1;
+        ws.send(JSON.stringify(msg));
         break;
       case "select":
-        ws.send(msg.legend+" selected.");
+        if(legendsSelected.indexOf(rec.legend)===-1){
+          var msg={
+            type: "selected",
+            legend: rec.legend
+          };
+          legendsSelected.push(rec.legend);
+          ws.send(JSON.stringify(msg));
+        }else{
+          var msg={
+            type: "selectedFailed",
+            legend: rec.legend
+          };
+          ws.send(JSON.stringify(msg));
+        }
+        break;
+      case "newPlayer":
+        players[rec.clientID]=rec.session;
+        break;
+      case "clientUpdate":
+        players[rec.clientID]=rec.session;
+        break;
+      default:
+        console.log("Unknown message type recieved: " + rec.type);
         break;
     }
 
   });
 });
+
+//update game state
+setInterval(function(){
+  var msg={
+    type:"update",
+    players: players
+  };
+  broadcast(JSON.stringify(msg));
+}, 10);
+
+function broadcast(msg) {
+   //console.log(msg);
+   wss.clients.forEach(function each(client) {
+       client.send(msg);
+    });
+};
