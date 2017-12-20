@@ -8,7 +8,7 @@ game.state.add('boot',bootState);
 game.state.add('load',loadState);
 game.state.add('menu',menuState);
 game.state.add('play',playState);
-game.state.add('win',winState);
+game.state.add('gameover',gameoverState);
 
 var ws = new WebSocket('ws://207.144.79.111:40510');
 // event emmited when connected
@@ -18,7 +18,7 @@ ws.onopen = function () {
 };
 
 ws.onclose=function(){
-  game.state.start('win');
+  game.state.start('gameover');
 };
 
 ws.onmessage = function (event) {

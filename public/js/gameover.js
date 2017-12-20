@@ -1,4 +1,4 @@
-var winState={
+var gameoverState={
   preload:function(){
     game.load.audio('oneWay','assets/audio/oneWay.ogg');
   },
@@ -8,7 +8,7 @@ var winState={
     //music.play();
 
 
-    subTitle=game.add.text(80, 0, "That seat wasn't empty yesterday.", {font: '50px Arial', fill: '#ffffff'});
+    subTitle=game.add.text(0, 0, "Click to play again.", {font: '50px Arial', fill: '#ffffff'});
     title=game.add.text(80, 80, ":'(", {font: '50px Arial', fill: '#ffffff'});
     //cover=game.add.image(80,160,'win');
     var startLabel=game.add.text(90, game.world.height-80, 'Click to Play Again', {font: '25px Arial', fill: '#ffffff'});
@@ -34,6 +34,6 @@ var winState={
 
   restart: function(){
     //music.stop();
-    game.state.start('menu');
+    game.state.start('boot');
   }
 }

@@ -3,12 +3,12 @@ var map;
 var tileset;
 var layer;
 var bg;
+var healthbar;
 
 //variables that relate to displaying and controlling local character
 var player;
 var facing = 'left';
 var jumpTimer = 0;
-var isAttack=false;
 var isJump=false;
 var attackTimer=0;
 var attackCount=0;
@@ -27,12 +27,16 @@ var jkAttributes={
   speed:75,
   jump:400,
   bounce:0.3,
+  health:100,
   power:3,
   attack: function(p){
     if(!p.body.onFloor()){
       p.body.velocity.x=0;
       p.frame=4;
       p.body.velocity.y = 500;
+      session.isAttack=true;
+    }else{
+      session.isAttack=false;
     };
   }
 };
@@ -43,15 +47,20 @@ var jarmyAttributes={
   speed:150,
   jump:450,
   bounce:0.2,
+  health:100,
   power:2,
   attack: function(p){
     if(p.body.onFloor()===true){
       if(facing=="left"){
         p.frame=7;
         p.body.velocity.x=-300;
+        session.isAttack=true;
       }else if(facing=="right"){
         p.frame=7;
         p.body.velocity.x=300;
+        session.isAttack=true;
+      }else{
+        session.isAttack=false;
       };
     };
   }
@@ -61,6 +70,7 @@ var playState={
   preload: function(){
     game.load.tilemap('arena', 'assets/levels/arena.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.image('tiles-1', 'assets/levels/tiles-1.png');
+    game.load.spritesheet('healthbar', 'assets/characters/healthbar.png', 100, 10);
     game.load.spritesheet('jk', 'assets/characters/jkSprites.png', 66, 82);
     game.load.spritesheet('jarmy', 'assets/characters/jarmySprites.png', 66, 82);
   },
@@ -106,9 +116,26 @@ var playState={
       player.animations.add('turn', [2], 20, true);
       player.animations.add('right', [0, 1, 2,3], 10, true);
       game.camera.follow(player);
+
       session.x=player.body.x;
       session.y=player.body.y;
-      msg={
+      session.health=session.attributes.health;
+      player.maxHealth = session.attributes.health;
+
+      var label=game.add.text(0,5,"+",{font:'bold 18px Arial', fill:'red'});
+      label.fixedToCamera=true;
+      playerHealthMeter = this.game.add.plugin(Phaser.Plugin.HealthMeter);
+      playerHealthMeter.bar(
+          player,
+          {x: 12, y: 5,
+            width: 200, height: 20,
+            foreground: '#00ff00',
+            background: '#ff0000',
+            alpha: 0.6
+          }
+      );
+
+      var msg={
         type:"newPlayer",
         clientID: session.clientID,
         session: session
@@ -119,15 +146,37 @@ var playState={
       cursors = game.input.keyboard.createCursorKeys();
       jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
+      enemies=game.add.group();
       ws.onmessage=function(){
         var rec=JSON.parse(event.data);
         switch(rec.type){
           case "update":
             for(var i in rec.players){
-              if((typeof rec.players[i] !=='undefined') && session.clientID!==rec.players[i].clientID){
+              if(rec.players[i] !==null && rec.players[i].isDead===true){
+                players[rec.players[i].clientID].sprite.destroy();
+                delete players[rec.players[i].clientID];
+              }else if(rec.players[i]!==null && session.clientID!==rec.players[i].clientID){
                 if(players.hasOwnProperty(rec.players[i].clientID)){
+                  //remote player movement
                   players[rec.players[i].clientID].sprite.x=rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX;
                   players[rec.players[i].clientID].sprite.y=rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY;
+
+
+                  //check collision with attacking remote player
+                  if(checkOverlap(player, players[rec.players[i].clientID].sprite) && rec.players[i].isAttack===true){
+                    session.health-=players[rec.players[i].clientID].attributes.power;
+                    if(session.health<=0){
+                      session.isDead=true;
+                      var msg={
+                        type:"clientUpdate",
+                        clientID:session.clientID,
+                        session:session
+                      };
+                      ws.send(JSON.stringify(msg));
+                      player.destroy();
+                      game.state.start('gameover');
+                    };
+                  };
 
                   //remote player animation
                   if(rec.players[i].isAttack==true){
@@ -155,13 +204,16 @@ var playState={
                   players[rec.players[i].clientID].sprite=game.add.sprite(rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX,rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY,rec.players[i].legend);
                   game.physics.enable(players[rec.players[i].clientID].sprite, Phaser.Physics.ARCADE);
                   players[rec.players[i].clientID].sprite.body.allowGravity=false;
+                  players[rec.players[i].clientID].sprite.body.immovable=true;
+                  players[rec.players[i].clientID].sprite.body.moves=false;
                   players[rec.players[i].clientID].sprite.body.collideWorldBounds = true;
                   players[rec.players[i].clientID].sprite.body.bounce.setTo(1, 1);
+                  enemies.add(players[rec.players[i].clientID].sprite);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('left', [0, 1, 2,3], 10, true);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('turn', [2], 20, true);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('right', [0, 1, 2,3], 10, true);
                 }else{
-                  console.log("Undefinited player object present.");
+                  console.log("Undefined player object present.");
                 };
               };
             };
@@ -169,22 +221,29 @@ var playState={
         };
       };
 
+      function checkOverlap(spriteA, spriteB){
+        var boundsA = spriteA.getBounds();
+        var boundsB = spriteB.getBounds();
+
+        return Phaser.Rectangle.intersects(boundsA, boundsB);
+      };
   },
 
   update: function() {
+    player.health=session.health;
+    playerHealthMeter.update();
+
+
     //local controls that broadcast state to server
     game.physics.arcade.collide(player, layer);
-    for(var i in players){
-      if(checkOverlap(player, players[i].sprite))console.log("true");
-    }
+    game.physics.arcade.collide(player, enemies);
 
     player.body.velocity.x = 0;
 
     if(cursors.down.isDown){
       session.attributes.attack(player);
-      isAttack=true;
     }else{
-      isAttack=false;
+      session.isAttack=false;
       if (cursors.left.isDown){
         player.body.velocity.x = -session.attributes.speed;
         if (facing != 'left'){
@@ -210,7 +269,7 @@ var playState={
       };
     };
 
-    if (cursors.up.isDown && player.body.onFloor() && game.time.now > jumpTimer){
+    if (cursors.up.isDown && (player.body.onFloor() || checkOverlap(player, enemies)) && game.time.now > jumpTimer){
       player.body.velocity.y = -session.attributes.jump;
       jumpTimer = game.time.now + 750;
       isJump=true;
@@ -219,27 +278,24 @@ var playState={
     };
 
     sendUpdate();
-
-    function checkOverlap(spriteA, spriteB){
-      var boundsA = spriteA.getBounds();
-      var boundsB = spriteB.getBounds();
-
-      return Phaser.Rectangle.intersects(boundsA, boundsB);
-    };
-
     //update server
     function sendUpdate(){
       session.x=player.body.x;
       session.y=player.body.y;
       session.facing=facing;
-      session.isAttack=isAttack;
-      session.isJump=isJump;
       var msg={
         type:"clientUpdate",
         clientID:session.clientID,
         session:session
       };
       ws.send(JSON.stringify(msg));
+    };
+
+    function checkOverlap(spriteA, spriteB){
+      var boundsA = spriteA.getBounds();
+      var boundsB = spriteB.getBounds();
+
+      return Phaser.Rectangle.intersects(boundsA, boundsB);
     };
   }
 }

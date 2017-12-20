@@ -49,7 +49,7 @@ wss.on('connection', function (ws) {
             type: "selected",
             legend: rec.legend
           };
-          legendsSelected.push(rec.legend);
+          //legendsSelected.push(rec.legend);
           ws.send(JSON.stringify(msg));
         }else{
           console.log(rec.legend + " was not able to be selected.");
@@ -68,10 +68,14 @@ wss.on('connection', function (ws) {
         players[rec.clientID]=rec.session;
         break;
       default:
-        console.log("Unknown message type recieved: " + rec.type);
+        console.log("Unusable message type recieved: " + rec.type);
         break;
     }
 
+  });
+
+  ws.on('close', function() {
+      console.log((new Date()) + ' Peer ' + ws.remoteAddress + ' disconnected.');
   });
 });
 
