@@ -1,8 +1,8 @@
 var loadState={
   preload:function(){
     game.load.image('loading','assets/loading.png');
-    game.load.image('jkButton', 'assets/characters/placeholder.png');
-    game.load.image('jarmyButton', 'assets/characters/placeholder.png');
+    game.load.image('jkButton', 'assets/characters/jkButton.png');
+    game.load.image('jarmyButton', 'assets/characters/jarmyButton.png');
     game.load.image('title', 'assets/title.png');
     game.load.image('background', 'assets/levels/background.png');
 

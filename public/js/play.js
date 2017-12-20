@@ -9,8 +9,10 @@ var player;
 var facing = 'left';
 var jumpTimer = 0;
 var isAttack=false;
-var attackCounter;
-var attack;
+var isJump=false;
+var attackTimer=0;
+var attackCount=0;
+var attackDuration=0;
 
 var cursors;
 var jumpButton;
@@ -18,52 +20,49 @@ var jumpButton;
 //variables related to displaying the remote clients
 var players=[];
 
+//objects that represent the various character values
+var jkAttributes={
+  offsetX: 10,
+  offsetY: 16,
+  speed:75,
+  jump:400,
+  bounce:0.3,
+  power:3,
+  attack: function(p){
+    if(!p.body.onFloor()){
+      p.body.velocity.x=0;
+      p.frame=4;
+      p.body.velocity.y = 500;
+    };
+  }
+};
+
+var jarmyAttributes={
+  offsetX: 10,
+  offsetY: 16,
+  speed:150,
+  jump:450,
+  bounce:0.2,
+  power:2,
+  attack: function(p){
+    if(p.body.onFloor()===true){
+      if(facing=="left"){
+        p.frame=7;
+        p.body.velocity.x=-300;
+      }else if(facing=="right"){
+        p.frame=7;
+        p.body.velocity.x=300;
+      };
+    };
+  }
+};
+
 var playState={
   preload: function(){
     game.load.tilemap('arena', 'assets/levels/arena.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.image('tiles-1', 'assets/levels/tiles-1.png');
-
-    switch(session.legend){
-      case "jk":
-        game.load.spritesheet('dude', 'assets/characters/wario.png', 66, 82);
-        session.speed=75;
-        session.jump=400;
-        session.bounce=0.3;
-        session.power=3;
-        attack=function(p){
-          if(!p.body.onFloor()){
-            p.body.velocity.x=0;
-            p.animations.play('thwomp');
-            facing = 'idle';
-            p.body.velocity.y = 500;
-          }
-        };
-        break;
-      case "jarmy":
-        game.load.spritesheet('dude', 'assets/characters/wario.png', 66, 82);
-        session.speed=150;
-        session.jump=500;
-        session.bounce=.2;
-        session.power=2;
-        attack=function(p){
-          if(p.body.onFloor()===true && attackCounter<12){
-            if(cursors.left.isDown){
-              p.animations.play('thwomp');
-              p.body.velocity.x=-500
-              facing="left";
-            }else if(cursors.right.isDown){
-              p.animations.play('thwomp');
-              p.body.velocity.x=500;
-              facing="right";
-            }else{
-              isAttack=false;
-            };
-          };
-        };
-        break;
-      default:
-        break;
-    };
+    game.load.spritesheet('jk', 'assets/characters/jkSprites.png', 66, 82);
+    game.load.spritesheet('jarmy', 'assets/characters/jarmySprites.png', 66, 82);
   },
 
   create: function() {
@@ -75,7 +74,7 @@ var playState={
 
       map.addTilesetImage('tiles-1');
 
-      map.setCollisionByExclusion([ 13, 14, 15, 16, 46, 47, 48, 49, 50, 51 ]);
+      map.setCollisionByExclusion([ 13, 14, 15, 16, 46, 47, 48, 49, 50, 51]);
 
       layer = map.createLayer('Tile Layer 1');
 
@@ -87,16 +86,25 @@ var playState={
       game.physics.arcade.gravity.y = 500;
 
       //player
-      player = game.add.sprite(0, 0, 'dude');
+      switch(session.legend){
+        case "jk":
+          session.attributes=jkAttributes;
+          break;
+        case "jarmy":
+          session.attributes=jarmyAttributes;
+          break;
+        default:
+          break;
+      };
+      player = game.add.sprite(0, 0, session.legend);
       game.physics.enable(player, Phaser.Physics.ARCADE);
-      player.body.bounce.y = session.bounce;
+      player.body.bounce.y = session.attributes.bounce;
       player.body.bounce.x = .2;
       player.body.collideWorldBounds = true;
-      player.body.setSize(40, 64, 10, 16);
+      player.body.setSize(40, 64, session.attributes.offsetX, session.attributes.offsetY);
       player.animations.add('left', [0, 1, 2,3], 10, true);
       player.animations.add('turn', [2], 20, true);
       player.animations.add('right', [0, 1, 2,3], 10, true);
-      player.animations.add('thwomp', [7], 20, true);
       game.camera.follow(player);
       session.x=player.body.x;
       session.y=player.body.y;
@@ -116,13 +124,45 @@ var playState={
         switch(rec.type){
           case "update":
             for(var i in rec.players){
-              if(session.clientID!==rec.players[i].clientID){
-                if(i in players){
-                  players[i].x=rec.players[i].x;
-                  players[i].y=rec.players[i].y;
+              if((typeof rec.players[i] !=='undefined') && session.clientID!==rec.players[i].clientID){
+                if(players.hasOwnProperty(rec.players[i].clientID)){
+                  players[rec.players[i].clientID].sprite.x=rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX;
+                  players[rec.players[i].clientID].sprite.y=rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY;
+
+                  //remote player animation
+                  if(rec.players[i].isAttack==true){
+                    players[rec.players[i].clientID].sprite.frame=5;
+                  }else if(rec.players[i].facing=='left'){
+                    players[rec.players[i].clientID].sprite.frame=0;
+                  }else if(rec.players[i].facing=='right'){
+                    players[rec.players[i].clientID].sprite.frame=3;
+                  }else{
+                    players[rec.players[i].clientID].sprite.frame=3;
+                  }
+
+                }else if(typeof rec.players[i].clientID !=='undefined'){
+                  players[rec.players[i].clientID]=[]
+                  switch(rec.players[i].legend){
+                    case "jk":
+                      players[rec.players[i].clientID].attributes=jkAttributes;
+                      break;
+                    case "jarmy":
+                      players[rec.players[i].clientID].attributes=jarmyAttributes;
+                      break;
+                    default:
+                      break;
+                  };
+                  players[rec.players[i].clientID].sprite=game.add.sprite(rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX,rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY,rec.players[i].legend);
+                  game.physics.enable(players[rec.players[i].clientID].sprite, Phaser.Physics.ARCADE);
+                  players[rec.players[i].clientID].sprite.body.allowGravity=false;
+                  players[rec.players[i].clientID].sprite.body.collideWorldBounds = true;
+                  players[rec.players[i].clientID].sprite.body.bounce.setTo(1, 1);
+                  //players[rec.players[i].clientID].sprite.spriteanimations.add('left', [0, 1, 2,3], 10, true);
+                  //players[rec.players[i].clientID].sprite.spriteanimations.add('turn', [2], 20, true);
+                  //players[rec.players[i].clientID].sprite.spriteanimations.add('right', [0, 1, 2,3], 10, true);
                 }else{
-                  players[i]=game.add.sprite(rec.players[i].x,rec.players[i].y,'star');
-                }
+                  console.log("Undefinited player object present.");
+                };
               };
             };
             break;
@@ -134,56 +174,72 @@ var playState={
   update: function() {
     //local controls that broadcast state to server
     game.physics.arcade.collide(player, layer);
-
-    player.body.velocity.x = 0;
-    if(isAttack===true){
-      attack(player);
-      isAttack=false;
-      attackCounter+=1;
-    }else{
-      attackCounter=0;
+    for(var i in players){
+      if(checkOverlap(player, players[i].sprite))console.log("true");
     }
 
+    player.body.velocity.x = 0;
+
     if(cursors.down.isDown){
+      session.attributes.attack(player);
       isAttack=true;
-    }else  if (cursors.left.isDown){
-      player.body.velocity.x = -session.speed;
-      if (facing != 'left'){
-        player.animations.play('left');
-        facing = 'left';
-      }
-    }else if (cursors.right.isDown){
-      player.body.velocity.x = session.speed;
-      if (facing != 'right'){
-        player.animations.play('right');
-        facing = 'right';
-      }
     }else{
-      if (facing != 'idle'){
-        player.animations.stop();
-        if (facing == 'left'){
-            player.frame = 0;
-        }else{
-            player.frame = 3;
+      isAttack=false;
+      if (cursors.left.isDown){
+        player.body.velocity.x = -session.attributes.speed;
+        if (facing != 'left'){
+          player.animations.play('left');
+          facing = 'left';
         }
-        facing = 'idle';
-      }
+      }else if (cursors.right.isDown){
+        player.body.velocity.x = session.attributes.speed;
+        if (facing != 'right'){
+          player.animations.play('right');
+          facing = 'right';
+        }
+      }else{
+        if (facing != 'idle'){
+          player.animations.stop();
+          if (facing == 'left'){
+              player.frame = 0;
+          }else{
+              player.frame = 3;
+          }
+          facing = 'idle';
+        }
+      };
     };
 
     if (cursors.up.isDown && player.body.onFloor() && game.time.now > jumpTimer){
-        player.body.velocity.y = -session.jump;
-        jumpTimer = game.time.now + 750;
+      player.body.velocity.y = -session.attributes.jump;
+      jumpTimer = game.time.now + 750;
+      isJump=true;
+    }else{
+      isJump=false;
+    };
+
+    sendUpdate();
+
+    function checkOverlap(spriteA, spriteB){
+      var boundsA = spriteA.getBounds();
+      var boundsB = spriteB.getBounds();
+
+      return Phaser.Rectangle.intersects(boundsA, boundsB);
     };
 
     //update server
-    session.x=player.body.x;
-    session.y=player.body.y;
-    session.isAttack=isAttack;
-    var msg={
-      type:"clientUpdate",
-      clientID:session.clientID,
-      session:session
+    function sendUpdate(){
+      session.x=player.body.x;
+      session.y=player.body.y;
+      session.facing=facing;
+      session.isAttack=isAttack;
+      session.isJump=isJump;
+      var msg={
+        type:"clientUpdate",
+        clientID:session.clientID,
+        session:session
+      };
+      ws.send(JSON.stringify(msg));
     };
-    ws.send(JSON.stringify(msg));
   }
 }

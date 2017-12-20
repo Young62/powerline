@@ -10,7 +10,7 @@ game.state.add('menu',menuState);
 game.state.add('play',playState);
 game.state.add('win',winState);
 
-var ws = new WebSocket('ws://192.168.1.64:40510');
+var ws = new WebSocket('ws://207.144.79.111:40510');
 // event emmited when connected
 ws.onopen = function () {
     // sending a send event to websocket server
