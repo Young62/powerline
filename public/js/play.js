@@ -32,16 +32,20 @@ var jkAttributes={
   health:1500,
   power:3,
   attack: function(p){
+    //player.animations.play('attack');
     if(!p.body.onFloor() && game.time.now < attackTimer){
+
       p.body.velocity.x=0;
       p.frame=4;
       p.body.velocity.y = 500;
       session.isAttack=true;
-
+      player.frame=7;
     }else if(game.time.now>attackTimer+300){
       attackTimer=game.time.now+200;
+      player.frame=6;
     }else{
       p.body.velocity.y=-275;
+      player.frame=6;
     };
   }
 };
@@ -59,15 +63,15 @@ var jarmyAttributes={
   power:2,
   attack: function(p){
     if(p.body.onFloor()===true){
+      player.animations.play('attack');
       if(facing=="left"){
         if(session.isAttack===false){
-          player.animations.play('leftAttack');
+
         };
         p.body.velocity.x=-300;
         session.isAttack=true;
       }else if(facing=="right"){
         if(session.isAttack===false){
-          player.animations.play('rightAttack');
         };
         p.body.velocity.x=300;
         session.isAttack=true;
@@ -83,8 +87,8 @@ var playState={
   preload: function(){
     game.load.tilemap('arena', 'assets/levels/arena.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.image('tiles-1', 'assets/levels/tiles-1.png');
-    game.load.spritesheet('jk', 'assets/characters/jk/jkWalkingSprites.png', 110, 100);
-    game.load.spritesheet('jarmy', 'assets/characters/jarmy/jarmySprites.png', 79,100);
+    game.load.spritesheet('jk', 'assets/characters/jk/jkSprites.png', 110, 100);
+    game.load.spritesheet('jarmy', 'assets/characters/jarmy/jarmySprites.png', 120,100);
   },
 
   create: function() {
@@ -111,22 +115,16 @@ var playState={
       //player
       player = game.add.sprite(500, 0, session.legend);
       game.physics.enable(player, Phaser.Physics.ARCADE);
+      player.animations.add('left', [0, 1, 2], 3, true);
+      //player.animations.add('turn', [2], 20, true);
+      player.animations.add('right', [3,4,5], 3, true);
+      player.animations.add('attack', [6,7], 3, true);
       switch(session.legend){
         case "jk":
           session.attributes=jkAttributes;
-          player.animations.add('left', [0, 1, 2], 3, true);
-          player.animations.add('turn', [2], 20, true);
-          player.animations.add('right', [3,4,5], 3, true);
-          player.animations.add('leftAttack', [9,10,11], 3, true);
-          player.animations.add('rightAttack', [6,7,8], 3, true);
           break;
         case "jarmy":
           session.attributes=jarmyAttributes;
-          player.animations.add('left', [0, 1, 2], 3, true);
-          player.animations.add('turn', [2], 20, true);
-          player.animations.add('right', [3,4,5], 3, true);
-          player.animations.add('leftAttack', [9,10,11], 3, true);
-          player.animations.add('rightAttack', [6,7,8], 3, true);
           break;
         default:
           break;
@@ -175,6 +173,7 @@ var playState={
               if(rec.players[i] !==null && rec.players[i].isDead===true){
                 try{
                   players[rec.players[i].clientID].sprite.destroy();
+                  players[rec.players[i].clientID].healthBar.kill();
                   delete players[rec.players[i].clientID];
                 }catch(e){
 
@@ -237,7 +236,7 @@ var playState={
                   players[rec.players[i].clientID].sprite.body.checkCollision.up = false;
                   players[rec.players[i].clientID].sprite.body.bounce.setTo(1, 1);
                   players[rec.players[i].clientID].sprite.maxHealth = players[rec.players[i].clientID].attributes.health;
-                  players[rec.players[i].clientID].healthBar = new HealthBar(game, {x:rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX+20, y:rec.players[i].y-15});
+                  players[rec.players[i].clientID].healthBar = new HealthBar(game, {x:rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX, y:rec.players[i].y-15});
 
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('left', [0, 1, 2,3], 10, true);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('turn', [2], 20, true);

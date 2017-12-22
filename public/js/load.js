@@ -6,10 +6,12 @@ var loadState={
     game.load.image('jarmyButton', 'assets/characters/jarmy/jarmyButton.png');
     game.load.image('background', 'assets/levels/background.png');
     game.load.image('forest', 'assets/levels/forest.png');
-    //game.load.image('star', 'assets/starstruck/star2.png');
+    game.load.audio('breakingTheLaw', 'assets/mainTheme.ogg');
   },
 
   create: function(){
+    music=game.add.audio('breakingTheLaw');
+    music.play();
     //var bg = game.add.tileSprite(0, 0, 800, 600, 'title');
     //bg.fixedToCamera = true;
     var sprite=game.add.sprite(game.world.centerX,game.world.centerY,'loading');

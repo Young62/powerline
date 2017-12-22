@@ -7,8 +7,7 @@ var subTitle;
 
 var menuState={
   create:function(){
-    //music=game.add.audio('blackCoffee');
-    //music.play();
+
 
     //cover=game.add.image(80,230,'cover');
     game.stage.backgroundColor = '#000000';
@@ -67,8 +66,7 @@ var menuState={
   },
 
   start: function(){
-    //music.stop();
-    //this.goFullScreen();
+    this.goFullScreen();
     game.state.start('play');
   }
 }
