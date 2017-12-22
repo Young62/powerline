@@ -5,6 +5,7 @@ var loadState={
     game.load.image('jkButton', 'assets/characters/jk/jkButton.png');
     game.load.image('jarmyButton', 'assets/characters/jarmy/jarmyButton.png');
     game.load.image('background', 'assets/levels/background.png');
+    game.load.image('forest', 'assets/levels/forest.png');
     //game.load.image('star', 'assets/starstruck/star2.png');
   },
 

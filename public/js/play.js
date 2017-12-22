@@ -26,7 +26,7 @@ var jkAttributes={
   offsetX: 40,
   offsetY: 12,
   speed:75,
-  jump:400,
+  jump:450,
   bounceY:0.3,
   bounceY:0.3,
   health:1500,
@@ -52,7 +52,7 @@ var jarmyAttributes={
   offsetX: 10,
   offsetY: 10,
   speed:150,
-  jump:450,
+  jump:400,
   bounceX:1,
   bounceY:0.2,
   health:1500,
@@ -88,9 +88,10 @@ var playState={
   },
 
   create: function() {
-      game.stage.backgroundColor = '#000000';
-      bg = game.add.tileSprite(0, 0, 800, 600, 'background');
-      bg.fixedToCamera = true;
+      game.stage.backgroundColor = '#993300';
+      bg1 = game.add.tileSprite(0, 0, 1200, 100, 'forest');
+      bg2 = game.add.tileSprite(0, 200, 1200, 600, 'background');
+      bg.fixedToCamera = false;
 
       map = game.add.tilemap('arena');
 
@@ -108,7 +109,7 @@ var playState={
       game.physics.arcade.gravity.y = 500;
 
       //player
-      player = game.add.sprite(0, 0, session.legend);
+      player = game.add.sprite(500, 0, session.legend);
       game.physics.enable(player, Phaser.Physics.ARCADE);
       switch(session.legend){
         case "jk":
