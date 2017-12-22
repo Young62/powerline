@@ -51,6 +51,8 @@ var menuState={
 
   },
 
+  characterSelect: function(){},
+
   disableButtons: function(){
 
   },

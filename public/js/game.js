@@ -2,15 +2,22 @@ var session={
 
 };
 
+var ws;
+
 var game = new Phaser.Game(800, 600, Phaser.CANVAS, 'Powerline');
+
 
 game.state.add('boot',bootState);
 game.state.add('load',loadState);
 game.state.add('menu',menuState);
 game.state.add('play',playState);
 game.state.add('gameover',gameoverState);
+game.state.add('connection',connectionState);
 
-var ws = new WebSocket('ws://207.144.79.111:40510');
+ws = new WebSocket('ws://104.15.79.139:40510');
+//maw's:http://207.144.79.111:3000/
+  //charles': http://104.15.79.139:3000/
+
 // event emmited when connected
 ws.onopen = function () {
     // sending a send event to websocket server
@@ -18,7 +25,7 @@ ws.onopen = function () {
 };
 
 ws.onclose=function(){
-  game.state.start('gameover');
+  //game.state.start('connection');
 };
 
 ws.onmessage = function (event) {

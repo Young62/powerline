@@ -34,7 +34,7 @@ wss.on('connection', function (ws) {
     var rec=JSON.parse(event);
     switch(rec.type){
       case "connection":
-        console.log("Client " + clientID + " connected");
+        console.log((new Date()) + ": Client " + clientID + " connected");
         var msg={
           type:"connected",
           clientID: clientID
@@ -44,7 +44,7 @@ wss.on('connection', function (ws) {
         break;
       case "select":
         if(legendsSelected.indexOf(rec.legend)===-1){
-          console.log(rec.legend + " was selected");
+          console.log((new Date()) +": " + rec.legend + " was selected");
           var msg={
             type: "selected",
             legend: rec.legend
@@ -52,7 +52,7 @@ wss.on('connection', function (ws) {
           //legendsSelected.push(rec.legend);
           ws.send(JSON.stringify(msg));
         }else{
-          console.log(rec.legend + " was not able to be selected.");
+          console.log((new Date()) +": " + rec.legend + " was not able to be selected.");
           var msg={
             type: "selectedFailed",
             legend: rec.legend
@@ -61,21 +61,21 @@ wss.on('connection', function (ws) {
         }
         break;
       case "newPlayer":
-        console.log("Client " + rec.clientID + " has entered the game as " +rec.session.legend);
+        console.log((new Date()) + ": Client " + rec.clientID + " has entered the game as " +rec.session.legend);
         players[rec.clientID]=rec.session;
         break;
       case "clientUpdate":
         players[rec.clientID]=rec.session;
         break;
       default:
-        console.log("Unusable message type recieved: " + rec.type);
+        console.log((new Date()) + ': Unusable message type recieved: ' + rec.type);
         break;
     }
 
   });
 
   ws.on('close', function() {
-      console.log((new Date()) + ' Peer ' + ws.remoteAddress + ' disconnected.');
+      console.log((new Date()) + ': Someone disconnected.');
   });
 });
 
@@ -91,6 +91,8 @@ setInterval(function(){
 function broadcast(msg) {
    //console.log(msg);
    wss.clients.forEach(function each(client) {
-       client.send(msg);
+       client.send(msg, function(e){
+         if(e!==undefined)console.log(e);
+       });
     });
 };

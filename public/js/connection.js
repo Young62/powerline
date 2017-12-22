@@ -1,7 +1,6 @@
-var gameoverState={
+var connectionState={
   preload:function(){
-    ws.close();
-    //game.load.audio('oneWay','assets/audio/oneWay.ogg');
+    game.load.audio('oneWay','assets/audio/oneWay.ogg');
   },
 
   create:function(){
@@ -9,12 +8,8 @@ var gameoverState={
     //music.play();
 
 
-    subTitle=game.add.text(0, 0, "Click to play again.", {font: '50px Arial', fill: '#ffffff'});
-    title=game.add.text(80, 80, ":'(", {font: '50px Arial', fill: '#ffffff'});
-    //cover=game.add.image(80,160,'win');
-    var startLabel=game.add.text(90, game.world.height-80, 'Click to Play Again', {font: '25px Arial', fill: '#ffffff'});
-
-    game.input.onTap.addOnce(this.restart,this);
+    subTitle=game.add.text(0, 0, "Connection lost.", {font: '50px Arial', fill: '#ffffff'});
+    title=game.add.text(80, 80, "Reload to try again.", {font: '50px Arial', fill: '#ffffff'});
   },
 
   update: function(){
@@ -35,6 +30,6 @@ var gameoverState={
 
   restart: function(){
     //music.stop();
-    location.reload(true);
+    game.state.start('boot');
   }
 }

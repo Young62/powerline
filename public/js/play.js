@@ -7,9 +7,8 @@ var healthbar;
 
 //variables that relate to displaying and controlling local character
 var player;
-var facing = 'left';
+var facing = 'right';
 var jumpTimer = 0;
-var isJump=false;
 var attackTimer=0;
 var attackCount=0;
 var attackDuration=0;
@@ -22,45 +21,59 @@ var players=[];
 
 //objects that represent the various character values
 var jkAttributes={
-  offsetX: 10,
-  offsetY: 16,
+  width: 50,
+  height: 80,
+  offsetX: 40,
+  offsetY: 12,
   speed:75,
   jump:400,
-  bounce:0.3,
-  health:100,
+  bounceY:0.3,
+  bounceY:0.3,
+  health:1500,
   power:3,
   attack: function(p){
-    if(!p.body.onFloor()){
+    if(!p.body.onFloor() && game.time.now < attackTimer){
       p.body.velocity.x=0;
       p.frame=4;
       p.body.velocity.y = 500;
       session.isAttack=true;
+
+    }else if(game.time.now>attackTimer+300){
+      attackTimer=game.time.now+200;
     }else{
-      session.isAttack=false;
+      p.body.velocity.y=-275;
     };
   }
 };
 
 var jarmyAttributes={
+  width: 50,
+  height: 80,
   offsetX: 10,
-  offsetY: 16,
+  offsetY: 10,
   speed:150,
   jump:450,
-  bounce:0.2,
-  health:100,
+  bounceX:1,
+  bounceY:0.2,
+  health:1500,
   power:2,
   attack: function(p){
     if(p.body.onFloor()===true){
       if(facing=="left"){
-        p.frame=7;
+        if(session.isAttack===false){
+          player.animations.play('leftAttack');
+        };
         p.body.velocity.x=-300;
         session.isAttack=true;
       }else if(facing=="right"){
-        p.frame=7;
+        if(session.isAttack===false){
+          player.animations.play('rightAttack');
+        };
         p.body.velocity.x=300;
         session.isAttack=true;
       }else{
         session.isAttack=false;
+        facing="idle";
       };
     };
   }
@@ -70,9 +83,8 @@ var playState={
   preload: function(){
     game.load.tilemap('arena', 'assets/levels/arena.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.image('tiles-1', 'assets/levels/tiles-1.png');
-    game.load.spritesheet('healthbar', 'assets/characters/healthbar.png', 100, 10);
-    game.load.spritesheet('jk', 'assets/characters/jkSprites.png', 66, 82);
-    game.load.spritesheet('jarmy', 'assets/characters/jarmySprites.png', 66, 82);
+    game.load.spritesheet('jk', 'assets/characters/jk/jkWalkingSprites.png', 110, 100);
+    game.load.spritesheet('jarmy', 'assets/characters/jarmy/jarmySprites.png', 79,100);
   },
 
   create: function() {
@@ -96,25 +108,32 @@ var playState={
       game.physics.arcade.gravity.y = 500;
 
       //player
+      player = game.add.sprite(0, 0, session.legend);
+      game.physics.enable(player, Phaser.Physics.ARCADE);
       switch(session.legend){
         case "jk":
           session.attributes=jkAttributes;
+          player.animations.add('left', [0, 1, 2], 3, true);
+          player.animations.add('turn', [2], 20, true);
+          player.animations.add('right', [3,4,5], 3, true);
+          player.animations.add('leftAttack', [9,10,11], 3, true);
+          player.animations.add('rightAttack', [6,7,8], 3, true);
           break;
         case "jarmy":
           session.attributes=jarmyAttributes;
+          player.animations.add('left', [0, 1, 2], 3, true);
+          player.animations.add('turn', [2], 20, true);
+          player.animations.add('right', [3,4,5], 3, true);
+          player.animations.add('leftAttack', [9,10,11], 3, true);
+          player.animations.add('rightAttack', [6,7,8], 3, true);
           break;
         default:
           break;
       };
-      player = game.add.sprite(0, 0, session.legend);
-      game.physics.enable(player, Phaser.Physics.ARCADE);
-      player.body.bounce.y = session.attributes.bounce;
-      player.body.bounce.x = .2;
+      player.body.bounce.y = session.attributes.bounceY;
+      player.body.bounce.x = session.attributes.bounceX;
       player.body.collideWorldBounds = true;
-      player.body.setSize(40, 64, session.attributes.offsetX, session.attributes.offsetY);
-      player.animations.add('left', [0, 1, 2,3], 10, true);
-      player.animations.add('turn', [2], 20, true);
-      player.animations.add('right', [0, 1, 2,3], 10, true);
+      player.body.setSize(session.attributes.width, session.attributes.height, session.attributes.offsetX, session.attributes.offsetY);
       game.camera.follow(player);
 
       session.x=player.body.x;
@@ -153,40 +172,47 @@ var playState={
           case "update":
             for(var i in rec.players){
               if(rec.players[i] !==null && rec.players[i].isDead===true){
-                players[rec.players[i].clientID].sprite.destroy();
-                delete players[rec.players[i].clientID];
+                try{
+                  players[rec.players[i].clientID].sprite.destroy();
+                  delete players[rec.players[i].clientID];
+                }catch(e){
+
+                };
               }else if(rec.players[i]!==null && session.clientID!==rec.players[i].clientID){
                 if(players.hasOwnProperty(rec.players[i].clientID)){
                   //remote player movement
                   players[rec.players[i].clientID].sprite.x=rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX;
                   players[rec.players[i].clientID].sprite.y=rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY;
-
-
-                  //check collision with attacking remote player
-                  if(checkOverlap(player, players[rec.players[i].clientID].sprite) && rec.players[i].isAttack===true){
-                    session.health-=players[rec.players[i].clientID].attributes.power;
-                    if(session.health<=0){
-                      session.isDead=true;
-                      var msg={
-                        type:"clientUpdate",
-                        clientID:session.clientID,
-                        session:session
-                      };
-                      ws.send(JSON.stringify(msg));
-                      player.destroy();
-                      game.state.start('gameover');
-                    };
-                  };
+                  players[rec.players[i].clientID].healthBar.setPosition(rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX+20, rec.players[i].y-15);
+                  players[rec.players[i].clientID].healthBar.setPercent(((rec.players[i].health/rec.players[i].attributes.health)*100));
 
                   //remote player animation
-                  if(rec.players[i].isAttack==true){
+                  if(rec.players[i].isAttack===true){
+                    if(checkOverlap(player, players[rec.players[i].clientID].sprite)){
+                      console.log('hit');
+                      session.health-=players[rec.players[i].clientID].attributes.power;
+                      if(session.health<=0){
+                        session.isDead=true;
+                        var msg={
+                          type:"clientUpdate",
+                          clientID:session.clientID,
+                          session:session
+                        };
+                        ws.send(JSON.stringify(msg));
+                        player.destroy();
+                        game.state.start('gameover');
+                      };
+                    };
                     players[rec.players[i].clientID].sprite.frame=5;
                   }else if(rec.players[i].facing=='left'){
                     players[rec.players[i].clientID].sprite.frame=0;
+                    players[rec.players[i].clientID].isAttack=false;
                   }else if(rec.players[i].facing=='right'){
                     players[rec.players[i].clientID].sprite.frame=3;
+                    players[rec.players[i].clientID].isAttack=false;
                   }else{
                     players[rec.players[i].clientID].sprite.frame=3;
+                    players[rec.players[i].clientID].isAttack=false;
                   }
 
                 }else if(typeof rec.players[i].clientID !=='undefined'){
@@ -207,8 +233,11 @@ var playState={
                   players[rec.players[i].clientID].sprite.body.immovable=true;
                   players[rec.players[i].clientID].sprite.body.moves=false;
                   players[rec.players[i].clientID].sprite.body.collideWorldBounds = true;
+                  players[rec.players[i].clientID].sprite.body.checkCollision.up = false;
                   players[rec.players[i].clientID].sprite.body.bounce.setTo(1, 1);
-                  enemies.add(players[rec.players[i].clientID].sprite);
+                  players[rec.players[i].clientID].sprite.maxHealth = players[rec.players[i].clientID].attributes.health;
+                  players[rec.players[i].clientID].healthBar = new HealthBar(game, {x:rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX+20, y:rec.players[i].y-15});
+
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('left', [0, 1, 2,3], 10, true);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('turn', [2], 20, true);
                   //players[rec.players[i].clientID].sprite.spriteanimations.add('right', [0, 1, 2,3], 10, true);
@@ -233,10 +262,15 @@ var playState={
     player.health=session.health;
     playerHealthMeter.update();
 
-
     //local controls that broadcast state to server
     game.physics.arcade.collide(player, layer);
-    game.physics.arcade.collide(player, enemies);
+    players.forEach(function(enemy){
+      if(game.physics.arcade.collide(player, enemy.sprite)){
+        if(player.y+session.attributes.height>enemy.sprite.y-10){
+            player.body.velocity.y=-200;
+        };
+      };
+    });
 
     player.body.velocity.x = 0;
 
@@ -269,12 +303,9 @@ var playState={
       };
     };
 
-    if (cursors.up.isDown && (player.body.onFloor() || checkOverlap(player, enemies)) && game.time.now > jumpTimer){
+    if (cursors.up.isDown && player.body.onFloor() && game.time.now > jumpTimer){
       player.body.velocity.y = -session.attributes.jump;
       jumpTimer = game.time.now + 750;
-      isJump=true;
-    }else{
-      isJump=false;
     };
 
     sendUpdate();
@@ -289,13 +320,6 @@ var playState={
         session:session
       };
       ws.send(JSON.stringify(msg));
-    };
-
-    function checkOverlap(spriteA, spriteB){
-      var boundsA = spriteA.getBounds();
-      var boundsB = spriteB.getBounds();
-
-      return Phaser.Rectangle.intersects(boundsA, boundsB);
     };
   }
 }
