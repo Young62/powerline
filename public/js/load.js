@@ -11,7 +11,7 @@ var loadState={
 
   create: function(){
     music=game.add.audio('breakingTheLaw');
-    music.play();
+    //music.play();
     //var bg = game.add.tileSprite(0, 0, 800, 600, 'title');
     //bg.fixedToCamera = true;
     var sprite=game.add.sprite(game.world.centerX,game.world.centerY,'loading');

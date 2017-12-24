@@ -65,6 +65,7 @@ wss.on('connection', function (ws) {
         players[rec.clientID]=rec.session;
         break;
       case "clientUpdate":
+        rec.session.time=new Date();
         players[rec.clientID]=rec.session;
         break;
       default:
@@ -91,6 +92,14 @@ setInterval(function(){
 function broadcast(msg) {
    //console.log(msg);
    wss.clients.forEach(function each(client) {
+      timeNow=new Date();
+      players.forEach(function(player){
+        if(typeof player.time!=="undefined" && timeNow.getTime()-player.time.getTime()>100){
+          player.isActive=false;
+        }else if(typeof player.time!=="undefined" && timeNow.getTime()-player.time.getTime()>3000){
+          delete player;
+        };
+      });
        client.send(msg, function(e){
          if(e!==undefined)console.log(e);
        });

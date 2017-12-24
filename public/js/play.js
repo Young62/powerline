@@ -21,10 +21,10 @@ var players=[];
 
 //objects that represent the various character values
 var jkAttributes={
-  width: 50,
+  width: 40,
   height: 80,
-  offsetX: 40,
-  offsetY: 12,
+  offsetX: 20,
+  offsetY: 10,
   speed:75,
   jump:450,
   bounceY:0.3,
@@ -32,9 +32,7 @@ var jkAttributes={
   health:1500,
   power:3,
   attack: function(p){
-    //player.animations.play('attack');
     if(!p.body.onFloor() && game.time.now < attackTimer){
-
       p.body.velocity.x=0;
       p.frame=4;
       p.body.velocity.y = 500;
@@ -51,9 +49,9 @@ var jkAttributes={
 };
 
 var jarmyAttributes={
-  width: 50,
+  width: 40,
   height: 80,
-  offsetX: 10,
+  offsetX: 20,
   offsetY: 10,
   speed:150,
   jump:400,
@@ -63,17 +61,18 @@ var jarmyAttributes={
   power:2,
   attack: function(p){
     if(p.body.onFloor()===true){
-      player.animations.play('attack');
+
       if(facing=="left"){
         if(session.isAttack===false){
-
+          player.animations.play('attack');
         };
-        p.body.velocity.x=-300;
+        p.body.velocity.x=-400;
         session.isAttack=true;
       }else if(facing=="right"){
         if(session.isAttack===false){
+          player.animations.play('attack');
         };
-        p.body.velocity.x=300;
+        p.body.velocity.x=400;
         session.isAttack=true;
       }else{
         session.isAttack=false;
@@ -112,13 +111,13 @@ var playState={
 
       game.physics.arcade.gravity.y = 500;
 
-      //player
+      //player construction
+      /////////////////////
       player = game.add.sprite(500, 0, session.legend);
       game.physics.enable(player, Phaser.Physics.ARCADE);
       player.animations.add('left', [0, 1, 2], 3, true);
-      //player.animations.add('turn', [2], 20, true);
       player.animations.add('right', [3,4,5], 3, true);
-      player.animations.add('attack', [6,7], 3, true);
+      player.animations.add('attack', [6,7,8,9], 3, true);
       switch(session.legend){
         case "jk":
           session.attributes=jkAttributes;
@@ -140,6 +139,7 @@ var playState={
       session.health=session.attributes.health;
       player.maxHealth = session.attributes.health;
 
+      //player health bar
       var label=game.add.text(0,5,"+",{font:'bold 18px Arial', fill:'red'});
       label.fixedToCamera=true;
       playerHealthMeter = this.game.add.plugin(Phaser.Plugin.HealthMeter);
@@ -164,13 +164,12 @@ var playState={
       cursors = game.input.keyboard.createCursorKeys();
       jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
-      enemies=game.add.group();
       ws.onmessage=function(){
         var rec=JSON.parse(event.data);
         switch(rec.type){
           case "update":
             for(var i in rec.players){
-              if(rec.players[i] !==null && rec.players[i].isDead===true){
+              if(rec.players[i] !==null && (rec.players[i].isDead===true || rec.players[i].isActive===false)){
                 try{
                   players[rec.players[i].clientID].sprite.destroy();
                   players[rec.players[i].clientID].healthBar.kill();
@@ -181,9 +180,9 @@ var playState={
               }else if(rec.players[i]!==null && session.clientID!==rec.players[i].clientID){
                 if(players.hasOwnProperty(rec.players[i].clientID)){
                   //remote player movement
-                  players[rec.players[i].clientID].sprite.x=rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX;
-                  players[rec.players[i].clientID].sprite.y=rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY;
-                  players[rec.players[i].clientID].healthBar.setPosition(rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX+20, rec.players[i].y-15);
+                  players[rec.players[i].clientID].sprite.x=rec.players[i].x;
+                  players[rec.players[i].clientID].sprite.y=rec.players[i].y;
+                  players[rec.players[i].clientID].healthBar.setPosition(rec.players[i].x+3*(players[rec.players[i].clientID].attributes.offsetX), rec.players[i].y-15);
                   players[rec.players[i].clientID].healthBar.setPercent(((rec.players[i].health/rec.players[i].attributes.health)*100));
 
                   //remote player animation
@@ -202,33 +201,52 @@ var playState={
                         player.destroy();
                         game.state.start('gameover');
                       };
-                    };
-                    players[rec.players[i].clientID].sprite.frame=5;
-                  }else if(rec.players[i].facing=='left'){
-                    players[rec.players[i].clientID].sprite.frame=0;
-                    players[rec.players[i].clientID].isAttack=false;
-                  }else if(rec.players[i].facing=='right'){
-                    players[rec.players[i].clientID].sprite.frame=3;
-                    players[rec.players[i].clientID].isAttack=false;
-                  }else{
-                    players[rec.players[i].clientID].sprite.frame=3;
-                    players[rec.players[i].clientID].isAttack=false;
-                  }
 
+                      if(players[rec.players[i].clientID].isAttack!==true){
+                        players[rec.players[i].clientID].sprite.animations.play("attack");
+                        players[rec.players[i].clientID].isAttack=true;
+                      }
+                    };
+                  }else if(rec.players[i].facing==='left'){
+                    if(players[rec.players[i].clientID].facing!=='left'){
+                      players[rec.players[i].clientID].sprite.animations.play("left");
+                      players[rec.players[i].clientID].facing='left';
+                    };
+                  }else if(rec.players[i].facing==='right'){
+                    if(players[rec.players[i].clientID].facing!=='right'){
+                      players[rec.players[i].clientID].sprite.animations.play("right");
+                      players[rec.players[i].clientID].facing='right';
+                    };
+                  }else{
+                    if (rec.players[i].facing != 'idle'){
+                      player.animations.stop();
+                      if (facing=='left'){
+                          players[rec.players[i].clientID].sprite.frame=0;
+                      }else{
+                        players[rec.players[i].clientID].sprite.frame=3;
+                      }
+                      facing='idle';
+                    }
+                  };
                 }else if(typeof rec.players[i].clientID !=='undefined'){
-                  players[rec.players[i].clientID]=[]
+                  players[rec.players[i].clientID]=[];
                   switch(rec.players[i].legend){
                     case "jk":
                       players[rec.players[i].clientID].attributes=jkAttributes;
                       break;
                     case "jarmy":
                       players[rec.players[i].clientID].attributes=jarmyAttributes;
+                      //players[rec.players[i].clientID].sprite.animations.add('attack', [6, 7, 8, 9], 3, true);
                       break;
                     default:
                       break;
                   };
-                  players[rec.players[i].clientID].sprite=game.add.sprite(rec.players[i].x-players[rec.players[i].clientID].attributes.offsetX,rec.players[i].y-players[rec.players[i].clientID].attributes.offsetY,rec.players[i].legend);
+                  players[rec.players[i].clientID].sprite=game.add.sprite(rec.players[i].x,rec.players[i].y,rec.players[i].legend);
                   game.physics.enable(players[rec.players[i].clientID].sprite, Phaser.Physics.ARCADE);
+                  players[rec.players[i].clientID].sprite.body.setSize(players[rec.players[i].clientID].attributes.width, players[rec.players[i].clientID].attributes.height, players[rec.players[i].clientID].attributes.offsetX, players[rec.players[i].clientID].attributes.offsetY);
+                  players[rec.players[i].clientID].sprite.animations.add('left', [0, 1, 2], 3, true);
+                  players[rec.players[i].clientID].sprite.animations.add('right', [3, 4, 5], 3, true);
+                  players[rec.players[i].clientID].sprite.animations.add('attack', [6, 7], 3, true);
                   players[rec.players[i].clientID].sprite.body.allowGravity=false;
                   players[rec.players[i].clientID].sprite.body.immovable=true;
                   players[rec.players[i].clientID].sprite.body.moves=false;
@@ -236,11 +254,10 @@ var playState={
                   players[rec.players[i].clientID].sprite.body.checkCollision.up = false;
                   players[rec.players[i].clientID].sprite.body.bounce.setTo(1, 1);
                   players[rec.players[i].clientID].sprite.maxHealth = players[rec.players[i].clientID].attributes.health;
-                  players[rec.players[i].clientID].healthBar = new HealthBar(game, {x:rec.players[i].x+players[rec.players[i].clientID].attributes.offsetX, y:rec.players[i].y-15});
-
-                  //players[rec.players[i].clientID].sprite.spriteanimations.add('left', [0, 1, 2,3], 10, true);
-                  //players[rec.players[i].clientID].sprite.spriteanimations.add('turn', [2], 20, true);
-                  //players[rec.players[i].clientID].sprite.spriteanimations.add('right', [0, 1, 2,3], 10, true);
+                  players[rec.players[i].clientID].healthBar = new HealthBar(game, {x:players[rec.players[i].clientID].sprite.x, y:players[rec.players[i].clientID].sprite.y-15});
+                  players[rec.players[i].clientID].facing='idle';
+                  players[rec.players[i].clientID].isAttack='false';
+                  players[rec.players[i].clientID].sprite.frame=0;
                 }else{
                   console.log("Undefined player object present.");
                 };

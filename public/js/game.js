@@ -14,7 +14,7 @@ game.state.add('play',playState);
 game.state.add('gameover',gameoverState);
 game.state.add('connection',connectionState);
 
-ws = new WebSocket('ws://104.15.79.139:40510');
+ws = new WebSocket('ws://207.144.79.111:40510');
 //maw's:http://207.144.79.111:3000/
   //charles': http://104.15.79.139:3000/
 
