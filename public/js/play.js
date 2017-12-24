@@ -3,6 +3,7 @@ var map;
 var tileset;
 var layer;
 var bg;
+var hunter;
 var healthbar;
 
 //variables that relate to displaying and controlling local character
@@ -18,6 +19,10 @@ var jumpButton;
 
 //variables related to displaying the remote clients
 var players=[];
+var leader={
+  health:0
+};
+var oldTheme='';
 
 //objects that represent the various character values
 var jkAttributes={
@@ -30,6 +35,7 @@ var jkAttributes={
   bounceY:0.3,
   bounceY:0.3,
   health:1500,
+  theme: 'jkTheme',
   power:3,
   attack: function(p){
     if(!p.body.onFloor() && game.time.now < attackTimer){
@@ -58,6 +64,7 @@ var jarmyAttributes={
   bounceX:1,
   bounceY:0.2,
   health:1500,
+  theme: 'jarmyTheme',
   power:2,
   attack: function(p){
     if(p.body.onFloor()===true){
@@ -86,12 +93,12 @@ var playState={
   preload: function(){
     game.load.tilemap('arena', 'assets/levels/arena.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.image('tiles-1', 'assets/levels/tiles-1.png');
-    game.load.spritesheet('jk', 'assets/characters/jk/jkSprites.png', 110, 100);
-    game.load.spritesheet('jarmy', 'assets/characters/jarmy/jarmySprites.png', 120,100);
+    game.load.audio('jkTheme', 'assets/characters/jk/theme.ogg');
+    game.load.audio('jarmyTheme', 'assets/characters/jarmy/theme.ogg');
   },
 
   create: function() {
-      game.stage.backgroundColor = '#993300';
+      game.stage.backgroundColor = '#996600';
       bg1 = game.add.tileSprite(0, 0, 1200, 100, 'forest');
       bg2 = game.add.tileSprite(0, 200, 1200, 600, 'background');
       bg.fixedToCamera = false;
@@ -110,6 +117,11 @@ var playState={
       layer.resizeWorld();
 
       game.physics.arcade.gravity.y = 500;
+
+      hunter=game.add.sprite(650, -0, 'hunter');
+      game.physics.enable(hunter, Phaser.Physics.ARCADE);
+      hunter.body.setSize(30, 90, 25, 0);
+      hunter.body.collideWorldBounds = true;
 
       //player construction
       /////////////////////
@@ -188,7 +200,6 @@ var playState={
                   //remote player animation
                   if(rec.players[i].isAttack===true){
                     if(checkOverlap(player, players[rec.players[i].clientID].sprite)){
-                      console.log('hit');
                       session.health-=players[rec.players[i].clientID].attributes.power;
                       if(session.health<=0){
                         session.isDead=true;
@@ -281,19 +292,40 @@ var playState={
 
     //local controls that broadcast state to server
     game.physics.arcade.collide(player, layer);
+    game.physics.arcade.collide(hunter, layer);
     players.forEach(function(enemy){
       if(game.physics.arcade.collide(player, enemy.sprite)){
+        game.physics.arcade.collide(enemy, layer);
+
         if(player.y+session.attributes.height>enemy.sprite.y-10){
             player.body.velocity.y=-200;
+        };
+
+        if(enemy.health>leader.health){
+          leader=enemy;
         };
       };
     });
 
+    if(session.health>leader.health){
+      leader=session;
+    }
+
+    if(leader.theme!==oldTheme){
+      console.log('hit');
+      music.stop();
+      music=game.add.audio(leader.attributes.theme);
+      music.play();
+      oldTheme=leader.theme;
+    };
+
     player.body.velocity.x = 0;
 
     if(cursors.down.isDown){
+      hunter.frame=1;
       session.attributes.attack(player);
     }else{
+      hunter.frame=2;
       session.isAttack=false;
       if (cursors.left.isDown){
         player.body.velocity.x = -session.attributes.speed;
